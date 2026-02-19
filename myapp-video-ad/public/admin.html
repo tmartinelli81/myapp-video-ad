@@ -41,10 +41,20 @@
   <script>
     let orgId = null;
 
-    async function init() {
-      const sessionData = await new Promise(resolve => MYAPPS.session(resolve));
-      orgId = sessionData?.organization?.id || null;
-      if (!orgId) { showFeedback('Impossibile recuperare l\'ID organizzazione.', 'error'); return; }
+   async function init() {
+  const sessionData = await new Promise(resolve => MYAPPS.session(resolve));
+  // Prova tutti i possibili percorsi dove Cloud4Wi mette l'orgId
+  orgId = sessionData?.organization?.id 
+       || sessionData?.org?.id 
+       || sessionData?.orgId
+       || sessionData?.data?.organization?.id
+       || sessionData?.id
+       || null;
+  
+  // Se ancora non lo trova, usa un ID di fallback per non bloccare tutto
+  if (!orgId) {
+    orgId = 'default_org';
+  }
       try {
         const r = await fetch('/api/config/' + encodeURIComponent(orgId));
         if (r.ok) {
@@ -79,3 +89,4 @@
   </script>
 </body>
 </html>
+
