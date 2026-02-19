@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guarda il video per continuare</title>
+  <script src="https://splashportal.cloud4wi.com/myapps/v1/myapps-sdk.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0a; color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 20px; gap: 20px;
+    }
+    #video-wrap { width: 100%; max-width: 640px; }
+    #player { width: 100%; aspect-ratio: 16/9; background: #111; border-radius: 8px; overflow: hidden; }
+    #progress-wrap { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+    #progress-bar { flex: 1; height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
+    #progress-fill { height: 100%; background: #4ade80; width: 0%; transition: width 1s linear; }
+    #timer-label { font-size: 0.85rem; color: #aaa; white-space: nowrap; }
+    #continue-btn {
+      display: none; padding: 14px 48px; font-size: 1.1rem; font-weight: 600;
+      background: #4ade80; color: #000; border: none; border-radius: 50px;
+      cursor: pointer; transition: transform 0.1s, background 0.2s;
+    }
+    #continue-btn:hover { background: #22c55e; transform: scale(1.03); }
+    #message { font-size: 0.9rem; color: #888; }
+  </style>
+</head>
+<body>
+  <div id="video-wrap">
+    <div id="player"></div>
+    <div id="progress-wrap">
+      <div id="progress-bar"><div id="progress-fill"></div></div>
+      <div id="timer-label">Caricamento...</div>
+    </div>
+  </div>
+  <button id="continue-btn" onclick="MYAPPS.goNext()">Continua →</button>
+  <div id="message"></div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    let timerInterval, secondsWatched = 0, minDuration = 10;
+    let youtubeApiReady = false, pendingPlayerInit = null;
+
+    function onYouTubeIframeAPIReady() {
+      youtubeApiReady = true;
+      if (pendingPlayerInit) pendingPlayerInit();
+    }
+
+    function extractVideoId(url) {
+      if (!url) return null;
+      const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+      return m ? m[1] : url;
+    }
+
+    function showContinueButton() {
+      clearInterval(timerInterval);
+      document.getElementById('progress-fill').style.width = '100%';
+      document.getElementById('timer-label').textContent = '✓ Pronto!';
+      document.getElementById('continue-btn').style.display = 'inline-block';
+    }
+
+    function startTimer() {
+      if (timerInterval) return;
+      timerInterval = setInterval(() => {
+        secondsWatched++;
+        const pct = Math.min((secondsWatched / minDuration) * 100, 100);
+        document.getElementById('progress-fill').style.width = pct + '%';
+        const remaining = minDuration - secondsWatched;
+        if (remaining > 0) {
+          document.getElementById('timer-label').textContent = remaining + 's rimanenti';
+        } else { showContinueButton(); }
+      }, 1000);
+    }
+
+    function initPlayer(videoId) {
+      new YT.Player('player', {
+        videoId,
+        playerVars: { autoplay: 1, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+        events: {
+          onStateChange: function(e) {
+            if (e.data === YT.PlayerState.PLAYING) startTimer();
+            else if (e.data === YT.PlayerState.PAUSED) { clearInterval(timerInterval); timerInterval = null; }
+            else if (e.data === YT.PlayerState.ENDED) showContinueButton();
+          }
+        }
+      });
+    }
+
+    async function init() {
+      const sessionData = await new Promise(resolve => MYAPPS.session(resolve));
+      const orgId = sessionData?.organization?.id || 'default';
+      let config = { youtubeUrl: '', minDuration: 10 };
+      try {
+        const r = await fetch('/api/config/' + encodeURIComponent(orgId));
+        if (r.ok) config = await r.json();
+      } catch(e) {}
+      minDuration = parseInt(config.minDuration) || 10;
+      const videoId = extractVideoId(config.youtubeUrl);
+      document.getElementById('timer-label').textContent = minDuration + 's rimanenti';
+      document.getElementById('message').textContent = 'Guarda il video per continuare';
+      if (!videoId) { showContinueButton(); return; }
+      const doInit = () => initPlayer(videoId);
+      if (youtubeApiReady) doInit(); else pendingPlayerInit = doInit;
+    }
+
+    init();
+  </script>
+</body>
+</html>
