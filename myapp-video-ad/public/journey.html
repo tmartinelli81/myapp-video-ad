@@ -22,9 +22,8 @@
     #continue-btn {
       display: none; padding: 14px 48px; font-size: 1.1rem; font-weight: 600;
       background: #4ade80; color: #000; border: none; border-radius: 50px;
-      cursor: pointer; transition: transform 0.1s, background 0.2s;
+      cursor: pointer;
     }
-    #continue-btn:hover { background: #22c55e; transform: scale(1.03); }
     #message { font-size: 0.9rem; color: #888; }
   </style>
 </head>
@@ -38,7 +37,6 @@
   </div>
   <button id="continue-btn" onclick="MYAPPS.goNext()">Continua →</button>
   <div id="message"></div>
-
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     let timerInterval, secondsWatched = 0, minDuration = 10;
@@ -71,7 +69,9 @@
         const remaining = minDuration - secondsWatched;
         if (remaining > 0) {
           document.getElementById('timer-label').textContent = remaining + 's rimanenti';
-        } else { showContinueButton(); }
+        } else {
+          showContinueButton();
+        }
       }, 1000);
     }
 
@@ -82,7 +82,10 @@
         events: {
           onStateChange: function(e) {
             if (e.data === YT.PlayerState.PLAYING) startTimer();
-            else if (e.data === YT.PlayerState.PAUSED) { clearInterval(timerInterval); timerInterval = null; }
+            else if (e.data === YT.PlayerState.PAUSED) {
+              clearInterval(timerInterval);
+              timerInterval = null;
+            }
             else if (e.data === YT.PlayerState.ENDED) showContinueButton();
           }
         }
@@ -90,22 +93,19 @@
     }
 
     async function init() {
-      const sessionData = await new Promise(resolve => MYAPPS.session(resolve));
-      const orgId = sessionData?.organization?.id 
-           || sessionData?.org?.id 
-           || sessionData?.orgId
-           || sessionData?.data?.organization?.id
-           || sessionData?.id
-           || 'default_org';
+      const orgId = 'default_org';
+
       let config = { youtubeUrl: '', minDuration: 10 };
       try {
         const r = await fetch('/api/config/' + encodeURIComponent(orgId));
         if (r.ok) config = await r.json();
       } catch(e) {}
+
       minDuration = parseInt(config.minDuration) || 10;
       const videoId = extractVideoId(config.youtubeUrl);
       document.getElementById('timer-label').textContent = minDuration + 's rimanenti';
       document.getElementById('message').textContent = 'Guarda il video per continuare';
+
       if (!videoId) { showContinueButton(); return; }
       const doInit = () => initPlayer(videoId);
       if (youtubeApiReady) doInit(); else pendingPlayerInit = doInit;
@@ -115,4 +115,3 @@
   </script>
 </body>
 </html>
-
