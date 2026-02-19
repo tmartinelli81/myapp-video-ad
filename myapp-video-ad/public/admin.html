@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurazione Video Ad</title>
+  <script src="https://splashportal.cloud4wi.com/myapps/v1/myapps-sdk.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px; max-width: 520px; color: #222; }
+    h2 { font-size: 1.4rem; margin-bottom: 24px; }
+    .field { margin-bottom: 20px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; color: #444; }
+    input { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; }
+    input:focus { outline: none; border-color: #2563eb; }
+    small { color: #888; font-size: 0.8rem; margin-top: 4px; display: block; }
+    button { padding: 12px 32px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    #feedback { margin-top: 16px; padding: 10px 16px; border-radius: 8px; display: none; }
+    #feedback.success { background: #dcfce7; color: #16a34a; }
+    #feedback.error { background: #fee2e2; color: #dc2626; }
+  </style>
+</head>
+<body>
+  <h2>📹 Configurazione Video Ad</h2>
+  <form id="form">
+    <div class="field">
+      <label for="url">URL Video YouTube</label>
+      <input type="url" id="url" placeholder="https://www.youtube.com/watch?v=..." required>
+      <small>Incolla l'URL completo del video YouTube</small>
+    </div>
+    <div class="field">
+      <label for="duration">Durata minima di visualizzazione (secondi)</label>
+      <input type="number" id="duration" min="1" max="300" value="10" required>
+      <small>Il pulsante "Continua" appare dopo questi secondi, o alla fine del video</small>
+    </div>
+    <button type="submit">💾 Salva configurazione</button>
+  </form>
+  <div id="feedback"></div>
+
+  <script>
+    let orgId = null;
+
+    async function init() {
+      const sessionData = await new Promise(resolve => MYAPPS.session(resolve));
+      orgId = sessionData?.organization?.id || null;
+      if (!orgId) { showFeedback('Impossibile recuperare l\'ID organizzazione.', 'error'); return; }
+      try {
+        const r = await fetch('/api/config/' + encodeURIComponent(orgId));
+        if (r.ok) {
+          const config = await r.json();
+          if (config.youtubeUrl) document.getElementById('url').value = config.youtubeUrl;
+          if (config.minDuration) document.getElementById('duration').value = config.minDuration;
+        }
+      } catch(e) {}
+    }
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!orgId) { showFeedback('Sessione non disponibile.', 'error'); return; }
+      try {
+        const r = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orgId, youtubeUrl: document.getElementById('url').value, minDuration: parseInt(document.getElementById('duration').value) })
+        });
+        if (r.ok) showFeedback('✅ Configurazione salvata!', 'success');
+        else showFeedback('Errore nel salvataggio.', 'error');
+      } catch(e) { showFeedback('Errore: ' + e.message, 'error'); }
+    });
+
+    function showFeedback(msg, type) {
+      const el = document.getElementById('feedback');
+      el.textContent = msg; el.className = type; el.style.display = 'block';
+      if (type === 'success') setTimeout(() => el.style.display = 'none', 4000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
