@@ -91,7 +91,12 @@
 
     async function init() {
       const sessionData = await new Promise(resolve => MYAPPS.session(resolve));
-      const orgId = sessionData?.organization?.id || 'default';
+      const orgId = sessionData?.organization?.id 
+           || sessionData?.org?.id 
+           || sessionData?.orgId
+           || sessionData?.data?.organization?.id
+           || sessionData?.id
+           || 'default_org';
       let config = { youtubeUrl: '', minDuration: 10 };
       try {
         const r = await fetch('/api/config/' + encodeURIComponent(orgId));
@@ -110,3 +115,4 @@
   </script>
 </body>
 </html>
+
