@@ -78,7 +78,7 @@
     function initPlayer(videoId) {
       new YT.Player('player', {
         videoId,
-        playerVars: { autoplay: 1, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+        playerVars: { autoplay: 1, mute: 1, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
         events: {
           onStateChange: function(e) {
             if (e.data === YT.PlayerState.PLAYING) startTimer();
@@ -115,3 +115,4 @@
   </script>
 </body>
 </html>
+
